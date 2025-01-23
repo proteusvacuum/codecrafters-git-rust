@@ -18,6 +18,7 @@ enum Commands {
         p: String,
     },
     HashObject {
+        #[clap(short)]
         w: String,
     },
 }
