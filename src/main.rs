@@ -17,6 +17,9 @@ enum Commands {
         #[clap(short)]
         p: String,
     },
+    HashObject {
+        w: String,
+    },
 }
 mod commands;
 fn main() {
@@ -31,6 +34,9 @@ fn main() {
         }
         Commands::CatFile { p } => {
             commands::cat_file::cat_file(&p);
+        }
+        Commands::HashObject { w } => {
+            commands::hash_object::hash_object(&w);
         }
     }
 }
