@@ -34,10 +34,10 @@ fn main() {
             fs::write(".git/HEAD", "ref: refs/heads/main\n").unwrap();
         }
         Commands::CatFile { p } => {
-            commands::cat_file::cat_file(&p);
+            commands::cat_file(&p);
         }
         Commands::HashObject { w } => {
-            commands::hash_object::hash_object(&w);
+            commands::hash_object(&w);
         }
     }
 }
