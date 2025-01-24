@@ -1,5 +1,5 @@
 pub fn cat_file(object_name: &str) {
-    let decoded_blob = super::utils::decode_blob(object_name);
+    let decoded_blob = super::utils::decode_blob_as_string(object_name);
     print!("{}", get_blob_contents(&decoded_blob))
 }
 
