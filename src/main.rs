@@ -19,7 +19,7 @@ enum Commands {
         #[clap(short, action = clap::ArgAction::SetTrue)]
         p: bool,
 
-        path: String,
+        object_name: String,
     },
     HashObject {
         #[clap(short, action = clap::ArgAction::SetTrue)]
@@ -31,7 +31,7 @@ enum Commands {
         #[clap(long, action = clap::ArgAction::SetTrue)]
         name_only: bool,
 
-        path: String,
+        object_name: String,
     },
 }
 
@@ -45,14 +45,17 @@ fn main() {
             fs::create_dir(".git/refs").unwrap();
             fs::write(".git/HEAD", "ref: refs/heads/main\n").unwrap();
         }
-        Commands::CatFile { path, .. } => {
-            commands::cat_file(&path);
+        Commands::CatFile { object_name, .. } => {
+            commands::cat_file(&object_name);
         }
         Commands::HashObject { path, .. } => {
             commands::hash_object(&path);
         }
-        Commands::LsTree { name_only, path } => {
-            commands::ls_tree(name_only, &path);
+        Commands::LsTree {
+            name_only,
+            object_name,
+        } => {
+            commands::ls_tree(name_only, &object_name);
         }
     }
 }
