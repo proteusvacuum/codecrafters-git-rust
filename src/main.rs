@@ -5,6 +5,8 @@ use std::env;
 #[allow(unused_imports)]
 use std::fs;
 
+mod commands;
+
 #[derive(Parser)]
 struct Cli {
     #[clap(subcommand)]
@@ -14,15 +16,25 @@ struct Cli {
 enum Commands {
     Init {},
     CatFile {
-        #[clap(short)]
-        p: String,
+        #[clap(short, action = clap::ArgAction::SetTrue)]
+        p: bool,
+
+        path: String,
     },
     HashObject {
-        #[clap(short)]
-        w: String,
+        #[clap(short, action = clap::ArgAction::SetTrue)]
+        w: bool,
+
+        path: String,
+    },
+    LsTree {
+        #[clap(long, action = clap::ArgAction::SetTrue)]
+        name_only: bool,
+
+        path: String,
     },
 }
-mod commands;
+
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     let cli = Cli::parse();
@@ -33,11 +45,14 @@ fn main() {
             fs::create_dir(".git/refs").unwrap();
             fs::write(".git/HEAD", "ref: refs/heads/main\n").unwrap();
         }
-        Commands::CatFile { p } => {
-            commands::cat_file(&p);
+        Commands::CatFile { path, .. } => {
+            commands::cat_file(&path);
         }
-        Commands::HashObject { w } => {
-            commands::hash_object(&w);
+        Commands::HashObject { path, .. } => {
+            commands::hash_object(&path);
+        }
+        Commands::LsTree { name_only, path } => {
+            commands::ls_tree(name_only, &path);
         }
     }
 }
