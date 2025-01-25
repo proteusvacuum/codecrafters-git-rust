@@ -1,13 +1,16 @@
 use super::utils::decode_blob_as_bytes;
+use super::utils::hex_encode;
+
+use std::fmt::Write;
 
 #[derive(Debug)]
-struct TreeObject {
-    mode: String,
-    name: String,
-    sha: String,
+pub struct TreeObject {
+    pub mode: String,
+    pub name: String,
+    pub sha: String,
 }
 
-pub fn ls_tree(name_only: &bool, object_name: &str) {
+pub fn ls_tree(name_only: &bool, object_name: &str) -> String {
     let decoded_blob = decode_blob_as_bytes(object_name);
     // Decoded blob is a string that looks like:
     //  tree <size>\0<mode> <name>\0<20_byte_sha><mode> <name>\0<20_byte_sha>
@@ -43,10 +46,7 @@ pub fn ls_tree(name_only: &bool, object_name: &str) {
 
         // Parse the 20-byte SHA
         let sha = if offset + 20 <= decoded_blob.len() {
-            let sha = decoded_blob[offset..offset + 20]
-                .iter()
-                .map(|&byte| format!("{:02x}", byte))
-                .collect::<String>();
+            let sha = hex_encode(&decoded_blob[offset..offset + 20]);
             offset += 20;
             sha
         } else {
@@ -59,14 +59,15 @@ pub fn ls_tree(name_only: &bool, object_name: &str) {
             sha,
         })
     }
-
+    let mut output = String::new();
     for tree_object in tree_objects {
         if *name_only {
-            println!("{}", tree_object.name)
+            writeln!(&mut output, "{}", tree_object.name).unwrap();
         } else {
-            println!(
-                "{} {} {}\t{}",
-                format!("{:0>6}", tree_object.mode),
+            writeln!(
+                &mut output,
+                "{:0>6} {} {}\t{}",
+                tree_object.mode,
                 if tree_object.mode == "40000" {
                     "tree"
                 } else {
@@ -75,6 +76,8 @@ pub fn ls_tree(name_only: &bool, object_name: &str) {
                 tree_object.sha,
                 tree_object.name,
             )
+            .unwrap();
         }
     }
+    output
 }

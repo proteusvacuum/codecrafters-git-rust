@@ -33,10 +33,10 @@ enum Commands {
 
         object_name: String,
     },
+    WriteTree {},
 }
 
 fn main() {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
     let cli = Cli::parse();
     match &cli.command {
         Commands::Init {} => {
@@ -46,16 +46,19 @@ fn main() {
             fs::write(".git/HEAD", "ref: refs/heads/main\n").unwrap();
         }
         Commands::CatFile { object_name, .. } => {
-            commands::cat_file(&object_name);
+            print!("{}", commands::cat_file(object_name));
         }
         Commands::HashObject { path, .. } => {
-            commands::hash_object(&path);
+            print!("{}", commands::hash_object(path));
         }
         Commands::LsTree {
             name_only,
             object_name,
         } => {
-            commands::ls_tree(name_only, &object_name);
+            print!("{}", commands::ls_tree(name_only, object_name));
+        }
+        Commands::WriteTree {} => {
+            print!("{}", commands::write_tree());
         }
     }
 }
