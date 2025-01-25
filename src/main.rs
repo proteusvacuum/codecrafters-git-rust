@@ -34,6 +34,15 @@ enum Commands {
         object_name: String,
     },
     WriteTree {},
+    CommitTree {
+        tree_sha: String,
+
+        #[clap(short)]
+        p: String,
+
+        #[clap(short)]
+        m: String,
+    },
 }
 
 fn main() {
@@ -59,6 +68,13 @@ fn main() {
         }
         Commands::WriteTree {} => {
             print!("{}", commands::write_tree());
+        }
+        Commands::CommitTree {
+            tree_sha,
+            p: parent_sha,
+            m: message,
+        } => {
+            print!("{}", commands::commit_tree(tree_sha, parent_sha, message));
         }
     }
 }
