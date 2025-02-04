@@ -14,18 +14,41 @@ pub fn ls_tree(name_only: &bool, object_name: &str) -> String {
     let decoded_blob = decode_blob_as_bytes(object_name);
     // Decoded blob is a string that looks like:
     //  tree <size>\0<mode> <name>\0<20_byte_sha><mode> <name>\0<20_byte_sha>
+    // discard tree <size>
+    let mut offset: usize = 0;
+    while offset < decoded_blob.len() && decoded_blob[offset] != b'\0' {
+        offset += 1;
+    }
+    offset += 1;
+    let mut output = String::new();
+    for tree_object in tree_objects_from_blob(&decoded_blob[offset..]) {
+        if *name_only {
+            writeln!(&mut output, "{}", tree_object.name).unwrap();
+        } else {
+            writeln!(
+                &mut output,
+                "{:0>6} {} {}\t{}",
+                tree_object.mode,
+                if tree_object.mode == "40000" {
+                    "tree"
+                } else {
+                    "blob"
+                },
+                tree_object.sha,
+                tree_object.name,
+            )
+            .unwrap();
+        }
+    }
+    output
+}
 
+pub fn tree_objects_from_blob(decoded_blob: &[u8]) -> Vec<TreeObject> {
     let mut tree_objects: Vec<TreeObject> = Vec::new();
 
     // Iterate over the decoded blob.
     // We can't just split on \0 as the 20_byte_sha might actually contain the null character.
     let mut offset: usize = 0;
-
-    // discard tree <size>
-    while offset < decoded_blob.len() && decoded_blob[offset] != b'\0' {
-        offset += 1;
-    }
-    offset += 1;
 
     while offset < decoded_blob.len() {
         let mode_start = offset;
@@ -59,25 +82,5 @@ pub fn ls_tree(name_only: &bool, object_name: &str) -> String {
             sha,
         })
     }
-    let mut output = String::new();
-    for tree_object in tree_objects {
-        if *name_only {
-            writeln!(&mut output, "{}", tree_object.name).unwrap();
-        } else {
-            writeln!(
-                &mut output,
-                "{:0>6} {} {}\t{}",
-                tree_object.mode,
-                if tree_object.mode == "40000" {
-                    "tree"
-                } else {
-                    "blob"
-                },
-                tree_object.sha,
-                tree_object.name,
-            )
-            .unwrap();
-        }
-    }
-    output
+    tree_objects
 }

@@ -43,6 +43,10 @@ enum Commands {
         #[clap(short)]
         m: String,
     },
+    Clone {
+        repo_url: String,
+        dir: String,
+    },
 }
 
 fn main() {
@@ -75,6 +79,9 @@ fn main() {
             m: message,
         } => {
             print!("{}", commands::commit_tree(tree_sha, parent_sha, message));
+        }
+        Commands::Clone { repo_url, dir } => {
+            print!("{}", commands::clone(repo_url, dir));
         }
     }
 }
