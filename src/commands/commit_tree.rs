@@ -1,5 +1,4 @@
 use super::utils;
-use chrono;
 use std::io::Write;
 
 pub fn commit_tree(tree_sha: &str, parent_sha: &str, message: &str) -> String {

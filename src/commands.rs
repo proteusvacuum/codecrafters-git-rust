@@ -1,12 +1,13 @@
+mod tree;
 mod utils;
 
 mod cat_file;
 mod clone;
 mod commit_tree;
 mod hash_object;
+mod init;
 mod ls_tree;
 mod write_tree;
-mod init;
 
 pub use cat_file::cat_file;
 pub use clone::clone;

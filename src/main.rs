@@ -24,7 +24,6 @@ enum Commands {
     HashObject {
         #[clap(short, action = clap::ArgAction::SetTrue)]
         w: bool,
-
         path: String,
     },
     LsTree {
@@ -53,10 +52,7 @@ fn main() {
     let cli = Cli::parse();
     match &cli.command {
         Commands::Init {} => {
-            fs::create_dir(".git").unwrap();
-            fs::create_dir(".git/objects").unwrap();
-            fs::create_dir(".git/refs").unwrap();
-            fs::write(".git/HEAD", "ref: refs/heads/main\n").unwrap();
+            commands::init();
         }
         Commands::CatFile { object_name, .. } => {
             print!("{}", commands::cat_file(object_name));
@@ -81,7 +77,7 @@ fn main() {
             print!("{}", commands::commit_tree(tree_sha, parent_sha, message));
         }
         Commands::Clone { repo_url, dir } => {
-            print!("{}", commands::clone(repo_url, dir));
+            commands::clone(repo_url, dir);
         }
     }
 }

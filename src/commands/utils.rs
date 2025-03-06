@@ -1,4 +1,3 @@
-use clap::builder::TryMapValueParser;
 use flate2::read::ZlibDecoder;
 use flate2::{write::ZlibEncoder, Compression};
 
@@ -10,7 +9,8 @@ use std::io::{self, Write as _};
 use sha1::{Digest, Sha1};
 
 use crate::commands::cat_file;
-use crate::commands::ls_tree::{self, tree_objects_from_blob};
+
+use super::tree::{TreeMode, TreeObjects};
 
 pub fn decode_blob_as_string(object_name: &str) -> String {
     let sha_directory = &object_name[0..2];
@@ -32,13 +32,6 @@ pub fn decode_blob_as_bytes(object_name: &str) -> Vec<u8> {
     let mut buffer = vec![];
     z.read_to_end(&mut buffer).unwrap();
     buffer
-}
-
-pub fn decode_bytes_to_string(compressed_blob: &[u8]) -> String {
-    let mut z = ZlibDecoder::new(&compressed_blob[..]);
-    let mut s = String::new();
-    z.read_to_string(&mut s).unwrap();
-    s
 }
 
 pub fn hex_encode(bytes: &[u8]) -> String {
@@ -69,6 +62,43 @@ pub fn compress_content(content: &[u8]) -> io::Result<Vec<u8>> {
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(content)?;
     Ok(encoder.finish().unwrap())
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ObjectType {
+    // - OBJ_COMMIT (1)
+    //     - OBJ_TREE (2)
+    //     - OBJ_BLOB (3)
+    //     - OBJ_TAG (4)
+    //     - OBJ_OFS_DELTA (6)
+    //     - OBJ_REF_DELTA (7)
+    Commit,
+    Tree,
+    Blob,
+    Tag,
+    OfsDelta,
+    RefDelta,
+}
+
+impl Display for ObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase())
+    }
+}
+
+impl From<u8> for ObjectType {
+    fn from(value: u8) -> Self {
+        let obj_type = (&value & 0b0111_0000) >> 4;
+        match dbg!(obj_type) {
+            1 => ObjectType::Commit,
+            2 => ObjectType::Tree,
+            3 => ObjectType::Blob,
+            4 => ObjectType::Tag,
+            6 => ObjectType::OfsDelta,
+            7 => ObjectType::RefDelta,
+            _ => panic!("unexpected object type {obj_type}"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -108,19 +138,12 @@ impl Display for BlobType {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Blob {
-    blob_type: BlobType,
+    blob_type: ObjectType,
     blob: Vec<u8>,
 }
 
 impl Blob {
-    pub fn new(blob_type: u8, blob: &Vec<u8>) -> Self {
-        Self {
-            blob_type: blob_type.into(),
-            blob: blob.to_vec(),
-        }
-    }
-
-    pub fn new_with_blob_type(blob_type: BlobType, blob: &[u8]) -> Self {
+    pub fn new(blob_type: ObjectType, blob: &[u8]) -> Self {
         Self {
             blob_type,
             blob: blob.to_vec(),
@@ -139,44 +162,46 @@ impl Blob {
 
     pub fn materialize(&self, current_dir: &str) {
         match self.blob_type {
-            BlobType::Commit => {
+            ObjectType::Commit => {
                 let hash = std::str::from_utf8(&self.blob[5..45]).unwrap();
                 materialize_object(hash, current_dir);
             }
-            BlobType::Tree => {
+            ObjectType::Tree => {
                 // read the tree
-                let tree_objects = tree_objects_from_blob(&self.blob);
-                for tree_object in tree_objects {
-                    match tree_object.mode.chars().nth(0).unwrap() {
-                        '1' => {
-                            let path = format!("{}/{}", current_dir, tree_object.name);
-                            let content = cat_file(&tree_object.sha);
-                            fs::write(&path, content).unwrap();
-                        }
-                        '4' => {
+                for tree_object in &TreeObjects::from(&self.blob[..]).objects {
+                    match tree_object.mode {
+                        TreeMode::Tree => {
                             let new_dir = format!("{}/{}", current_dir, tree_object.name);
                             create_dir(&new_dir).unwrap();
                             materialize_object(&tree_object.sha, &new_dir);
                         }
-                        _ => {
-                            todo!();
+                        TreeMode::Blob => {
+                            let path = format!("{}/{}", current_dir, tree_object.name);
+                            let content = cat_file(&tree_object.sha);
+                            fs::write(&path, content).unwrap();
                         }
                     }
                 }
             }
-            BlobType::Blob => todo!(),
+            _ => todo!(),
         }
     }
 }
 
 pub fn materialize_object(hash: &str, current_dir: &str) {
     let bytes = decode_blob_as_bytes(hash);
-    let blob_type: BlobType = (bytes[0] as char).into();
+    let object_type = match bytes[0] as char {
+        'c' => ObjectType::Commit,
+        't' => ObjectType::Tree,
+        'b' => ObjectType::Blob,
+        _ => panic!(),
+    };
+    // let blob_type: BlobType = (bytes[0] as char).into();
     let start = bytes
         .iter()
         .position(|b| *b == b'\0')
         .expect("No null character found!");
 
-    let blob = Blob::new_with_blob_type(blob_type, &bytes[start + 1..]);
+    let blob = Blob::new(object_type, &bytes[start + 1..]);
     blob.materialize(current_dir)
 }
