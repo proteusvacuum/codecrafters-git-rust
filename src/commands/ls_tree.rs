@@ -1,4 +1,5 @@
 use super::{tree::TreeObjects, utils::decode_blob_as_bytes};
+use std::fmt::Write;
 
 pub fn ls_tree(name_only: &bool, object_name: &str) -> String {
     let decoded_blob = decode_blob_as_bytes(object_name);
@@ -16,8 +17,10 @@ pub fn ls_tree(name_only: &bool, object_name: &str) -> String {
         tree_objects
             .objects
             .iter()
-            .map(|tree_object| format!("{}\n", tree_object.name))
-            .collect()
+            .fold(String::new(), |mut output, tree_object| {
+                let _ = writeln!(output, "{}", tree_object.name);
+                output
+            })
     } else {
         format!("{tree_objects}")
     }

@@ -27,7 +27,7 @@ pub fn clone(repo_url: &str, dir: &str) {
 
 fn create_dir(dir: &str) {
     fs::create_dir(dir).unwrap();
-    env::set_current_dir(&dir).unwrap();
+    env::set_current_dir(dir).unwrap();
 }
 
 fn get_packfile(repo_url: &str) {
@@ -112,12 +112,8 @@ fn make_data_from_pack(data: Vec<u8>, head_ref: &str) -> Result<(), Box<dyn std:
 fn make_blob_from_data(data: &[u8]) -> usize {
     let mut offset = 0;
     let obj_type: ObjectType = data[offset].into();
-    let mut obj_len = (&data[offset] & 0b1111) as usize;
-    let mut shift_count = 4;
     while data[offset] & 0b1000_0000 != 0 {
         offset += 1;
-        obj_len = obj_len + (((data[offset] & 0b0111_1111) as usize) << shift_count);
-        shift_count += 8;
     }
     offset += 1;
     if obj_type == ObjectType::RefDelta {
@@ -126,7 +122,8 @@ fn make_blob_from_data(data: &[u8]) -> usize {
     let mut z = ZlibDecoder::new(&data[offset..]);
     let mut buffer = vec![];
     z.read_to_end(&mut buffer).unwrap();
-    offset += z.total_in() as usize;
+    let total_read = z.total_in() as usize;
+    offset += total_read;
     match obj_type {
         ObjectType::Commit | ObjectType::Tree | ObjectType::Blob | ObjectType::Tag => {
             let blob = Blob::new(obj_type.clone(), &buffer);
